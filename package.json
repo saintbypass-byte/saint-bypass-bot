@@ -1,0 +1,14 @@
+{
+  "name": "saint-bypass-bot",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Modular WhatsApp automation and group administration bot foundation",
+  "main": "legacy/index.js",
+  "scripts": {
+    "start": "node legacy/index.js",
+    "start:legacy": "node legacy/index.js",
+    "check": "node --check legacy/index.js",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=20" }
+}

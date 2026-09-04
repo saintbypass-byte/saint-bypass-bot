@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.*
+!.env.example
+*.session
+*.auth_info*
+auth_info_baileys/
+logs/
+.tmp/
+.DS_Store
+npm-debug.log*
