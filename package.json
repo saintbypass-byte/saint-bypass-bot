@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node legacy/index.js",
     "start:legacy": "node legacy/index.js",
+    "postinstall": "npm install --prefix legacy --omit=dev",
     "check": "node --check legacy/index.js",
     "test": "npm run test:jest && npm run test:node",
     "test:jest": "jest --runInBand --coverage",

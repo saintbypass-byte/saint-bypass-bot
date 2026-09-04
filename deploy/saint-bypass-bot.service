@@ -1,0 +1,16 @@
+[Unit]
+Description=Saint Bypass WhatsApp Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=saintbypass
+WorkingDirectory=/opt/saint-bypass-bot
+EnvironmentFile=/etc/saint-bypass-bot.env
+ExecStart=/usr/bin/node /opt/saint-bypass-bot/legacy/index.js
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
