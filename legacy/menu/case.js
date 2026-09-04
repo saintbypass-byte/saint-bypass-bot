@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { generateWAMessageFromContent } = require("@whiskeysockets/baileys");
 const { toggleAntidelete } = require("../antidelete");
+const { createSettingsCommandHandler } = require("../../src/commands/settings");
 
 // Default mode
 if (!global.mode) global.mode = "self";
@@ -10,7 +11,7 @@ if (!global.mode) global.mode = "self";
 // Owner-only commands list
 const ownerOnlyCommands = [
   "video2", "song2", "kick", "add", "nice", "tagall",
-  "antilink", "antilinkick", "autostatus", "autoreact",
+  "settings", "antilink", "antilinkick", "autostatus", "autoreact",
   "autogreet", "autotyping", "autoread", "block", "unblock",
   "shutdown", "restart", "setbio", "setname", "setpp", "save",
   "join", "delaymsg", "del", "reactch", "kickall", "antibug",
@@ -95,7 +96,8 @@ async function handleCommand(conn, msg) {
       chatId,
       isGroup,
       senderNum,
-      reply
+      reply,
+      isOwner
     });
   }
 
@@ -118,7 +120,8 @@ async function handleCommand(conn, msg) {
       chatId,
       isGroup,
       senderNum,
-      reply
+      reply,
+      isOwner
     });
   }
 
@@ -131,7 +134,8 @@ async function handleCommand(conn, msg) {
     chatId,
     isGroup,
     senderNum,
-    reply
+    reply,
+    isOwner
   });
 }
 
@@ -146,7 +150,8 @@ async function runCommand({
   chatId,
   isGroup,
   senderNum,
-  reply
+  reply,
+  isOwner = false
 }) {
   try {
     // 🔸 idcheck
@@ -170,6 +175,23 @@ async function runCommand({
         messageId: menuMessage.key.id
       });
     }
+
+    // 🔸 modular group settings; aliases remain backward-compatible
+    const settingsHandler = createSettingsCommandHandler({
+      store: {
+        get: (groupId, setting) => global[setting]?.[groupId] === true,
+        set: (groupId, setting, enabled) => {
+          global[setting] = global[setting] || {};
+          if (enabled) global[setting][groupId] = true;
+          else delete global[setting][groupId];
+          return enabled;
+        },
+      },
+      isAuthorized: () => isOwner,
+      isGroup,
+    });
+    const settingsResult = await settingsHandler({ command, args, jid: chatId, reply });
+    if (settingsResult.handled) return settingsResult;
 
     // 🔸 antidelete handler
     if (command === "antidelete") {
