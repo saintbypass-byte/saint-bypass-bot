@@ -1,4 +1,5 @@
 const fs = require("fs");
+const path = require("path");
 const readline = require("readline");
 const P = require("pino");
 const { 
@@ -15,6 +16,7 @@ const AntiLinkKick = require("./antilinkick.js");
 const { antibugHandler } = require("./antibug.js"); // ✅ import correct function
 const { createAntiLinkPolicy, handleAntiLink } = require("../src/features/anti-link");
 const { createGreetingHandler } = require("../src/features/greetings");
+const { createPersistentSettingsStore } = require("../src/system/persistent-settings");
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
@@ -26,6 +28,10 @@ async function startBot() {
   const sock = makeWASocket({ version, auth: state, logger: P({ level: "fatal" }) });
 
   const settings = typeof loadSettings === 'function' ? loadSettings() : {};
+  const settingsStore = createPersistentSettingsStore({
+    filePath: process.env.SETTINGS_FILE || path.join(process.cwd(), "data", "settings.json"),
+  });
+  await settingsStore.load();
   let ownerRaw = settings.ownerNumber?.[0] || "26371xxxxxxx";
   const ownerJid = ownerRaw.includes("@s.whatsapp.net") ? ownerRaw : ownerRaw + "@s.whatsapp.net";
 
@@ -33,13 +39,14 @@ async function startBot() {
   global.settings = settings;
   global.signature = settings.signature || "> 𓆩 𝑺𝑨𝑰𝑵𝑻𝑩𝒀𝑷𝑨𝑺𝑺 𓆪";
   global.owner = ownerJid;
-  global.ownerNumber = ownerRaw;
-
+    global.ownerNumber = ownerRaw;
+  global.settingsStore = settingsStore;
   // ✅ Flags
-  global.antilink = {};
+  global.antilink = settingsStore.state.antilink;
+
   global.antilinkick = {};
   global.antibug = false;
-  global.autogreet = {};
+  global.autogreet = settingsStore.state.autogreet;
   global.autotyping = false;
   global.autoreact = false;
   global.autostatus = false;

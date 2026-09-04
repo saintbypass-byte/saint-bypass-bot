@@ -5,6 +5,7 @@ node_modules/
 *.session
 *.auth_info*
 auth_info_baileys/
+data/
 logs/
 .tmp/
 .DS_Store

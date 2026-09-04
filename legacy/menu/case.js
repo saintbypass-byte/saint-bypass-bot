@@ -178,13 +178,13 @@ async function runCommand({
 
     // 🔸 modular group settings; aliases remain backward-compatible
     const settingsHandler = createSettingsCommandHandler({
-      store: {
+      store: global.settingsStore || {
         get: (groupId, setting) => global[setting]?.[groupId] === true,
         set: (groupId, setting, enabled) => {
           global[setting] = global[setting] || {};
           if (enabled) global[setting][groupId] = true;
           else delete global[setting][groupId];
-          return enabled;
+          return Promise.resolve(enabled);
         },
       },
       isAuthorized: () => isOwner,

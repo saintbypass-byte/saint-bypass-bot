@@ -87,7 +87,7 @@ function createSettingsCommandHandler({ store, isAuthorized = () => false, isGro
     }
 
     const enabled = parsed.mode === "on";
-    store.set(jid, parsed.setting, enabled);
+    await store.set(jid, parsed.setting, enabled);
     await reply(`✅ *${parsed.setting} ${enabled ? "enabled" : "disabled"} for this group.*`);
     return { handled: true, changed: true, setting: parsed.setting, value: enabled };
   };
