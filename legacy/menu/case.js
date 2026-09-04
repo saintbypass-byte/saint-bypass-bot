@@ -4,6 +4,10 @@ const path = require("path");
 const { generateWAMessageFromContent } = require("@whiskeysockets/baileys");
 const { toggleAntidelete } = require("../antidelete");
 const { createSettingsCommandHandler } = require("../../src/commands/settings");
+const { createLogger } = require("../../src/system/logger");
+const { handleError } = require("../../src/system/error-handler");
+
+const logger = createLogger({ context: { component: "command-dispatcher" } });
 
 // Default mode
 if (!global.mode) global.mode = "self";
@@ -229,8 +233,14 @@ async function runCommand({
     return reply("*ᴜɴᴋɴᴏᴡɴ ᴄᴏᴍᴍᴀɴᴅ! ᴛʀʏ `.ᴍᴇɴᴜ` ʙᴇꜰᴏʀᴇ sʜᴏᴡɪɴɢ ᴏꜰꜰ 𓄀*");
 
   } catch (err) {
-    console.error("⚠️ Error in command execution:", err);
-    return reply("⚠️ Error in command execution!");
+    return handleError({
+      logger,
+      error: err,
+      event: "command.execution_failed",
+      context: { command, chatId, sender: senderNum },
+      reply,
+      publicMessage: "⚠️ Error in command execution. Please try again later.",
+    });
   }
 }
 

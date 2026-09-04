@@ -17,11 +17,14 @@ const { antibugHandler } = require("./antibug.js"); // ✅ import correct functi
 const { createAntiLinkPolicy, handleAntiLink } = require("../src/features/anti-link");
 const { createGreetingHandler } = require("../src/features/greetings");
 const { createPersistentSettingsStore } = require("../src/system/persistent-settings");
+const { createLogger } = require("../src/system/logger");
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 
 async function startBot() {
+  const logger = createLogger({ context: { component: "bot-runtime" } });
+  logger.info("bot.starting");
   const { state, saveCreds } = await useMultiFileAuthState("auth_info");
   const { version } = await fetchLatestBaileysVersion();
 
@@ -51,7 +54,7 @@ async function startBot() {
   global.autoreact = false;
   global.autostatus = false;
 
-  console.log("✅ BOT OWNER:", global.owner);
+  logger.info("bot.owner_configured", { owner: global.owner });
 
   sock.ev.on("creds.update", saveCreds);
 
@@ -59,7 +62,7 @@ async function startBot() {
     const { connection, lastDisconnect } = update;
 
     if (connection === "open") {
-      console.log("✅ [BOT ONLINE] Connected to WhatsApp!");
+      logger.info("bot.connection.open");
       try {
         const bannerPath = path.resolve(__dirname, settings.startupBanner || "./media/saintbypass-banner.png");
         await sock.sendMessage(ownerJid, {
@@ -74,14 +77,14 @@ async function startBot() {
           ].join("\\n"),
         });
       } catch (err) {
-        console.error("❌ Startup banner error:", err.message);
+        logger.error("bot.startup_banner_failed", err, { owner: ownerJid });
       }
       rl.close();
     }
 
     if (connection === "close") {  
       const shouldReconnect = (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut);  
-      console.log("❌ Disconnected. Reconnecting:", shouldReconnect);  
+      logger.warn("bot.connection.closed", { reconnecting: shouldReconnect });
       if (shouldReconnect) startBot();  
     }
   });
@@ -201,7 +204,7 @@ async function startBot() {
     isEnabled: (groupId) => settings.greetings === true && global.autogreet?.[groupId] === true,
     getGroupMetadata: (groupId) => sock.groupMetadata(groupId),
     sendMessage: (groupId, content) => sock.sendMessage(groupId, content),
-    logger: { error: (label, error) => console.error(`❌ ${label}:`, error.message) },
+    logger: { error: (label, error) => logger.error("greeting.failed", error, { detail: label }) },
   });
 
   sock.ev.on("group-participants.update", async (update) => {
