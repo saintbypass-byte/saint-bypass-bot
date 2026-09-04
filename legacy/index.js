@@ -14,6 +14,7 @@ const { storeMessage, handleMessageRevocation } = require("./antidelete");
 const AntiLinkKick = require("./antilinkick.js");
 const { antibugHandler } = require("./antibug.js"); // ✅ import correct function
 const { createAntiLinkPolicy, handleAntiLink } = require("../src/features/anti-link");
+const { createGreetingHandler } = require("../src/features/greetings");
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
@@ -172,57 +173,18 @@ async function startBot() {
     }
   });
 
-  // ✅ AutoGreet
-  sock.ev.on("group-participants.update", async (update) => {
-    const { id, participants, action } = update;
-    if (!global.autogreet?.[id]) return;
-
-    try {
-      const metadata = await sock.groupMetadata(id);
-      const memberCount = metadata.participants.length;
-      const groupName = metadata.subject || "Unnamed Group";
-      const groupDesc = metadata.desc?.toString() || "No description set.";
-
-      for (const user of participants) {
-        const tag = `@${user.split("@")[0]}`;
-        let message = "";
-
-        if (action === "add") {
-          message = `
-┏━━━🔥༺ 𓆩💀𓆪 ༻🔥━━━┓
-   💠 *WELCOME TO BYPASS* 💠
-┗━━━🔥༺ 𓆩💀𓆪 ༻🔥━━━┛
-
-👹 *Hey ${tag}, Welcome to*  
-『 ${groupName} 』
-
-⚡ *Current Members:* ${memberCount}  
-📜 *Group Description:*  
-『 ${groupDesc} 』
-
-💀 *Attitude ON, Rules OFF*  
-👾 *SAINT BYPASS-MD welcomes you with POWER* ⚡
-          `;
-        } else if (action === "remove") {
-          message = `
-┏━━━💔༺ 𓆩☠️𓆪 ༻💔━━━┓
-   ❌ *GOODBYE WARRIOR* ❌
-┗━━━💔༺ 𓆩☠️𓆪 ༻💔━━━┛
-
-💔 ${tag} *has left the battlefield...*  
-⚡ *Now only ${memberCount - 1} members remain in ${groupName}*  
-☠️ *Hell doesn’t forget easily...*  
-          `;
-        }
-
-        if (message) {
-          await sock.sendMessage(id, { text: message, mentions: [user] });
-        }
-      }
-    } catch (err) {
-      console.error("❌ AutoGreet Error:", err.message);
-    }
+    // ✅ AutoGreet (modular feature)
+  const handleGreetingUpdate = createGreetingHandler({
+    isEnabled: (groupId) => settings.greetings === true && global.autogreet?.[groupId] === true,
+    getGroupMetadata: (groupId) => sock.groupMetadata(groupId),
+    sendMessage: (groupId, content) => sock.sendMessage(groupId, content),
+    logger: { error: (label, error) => console.error(`❌ ${label}:`, error.message) },
   });
+
+  sock.ev.on("group-participants.update", async (update) => {
+    await handleGreetingUpdate(update);
+  });
+
 
   // ✅ Pairing code
   if (!state.creds?.registered) {
