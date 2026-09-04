@@ -8,7 +8,14 @@
     "start": "node legacy/index.js",
     "start:legacy": "node legacy/index.js",
     "check": "node --check legacy/index.js",
-    "test": "node --test"
+    "test": "npm run test:jest && npm run test:node",
+    "test:jest": "jest --runInBand --coverage",
+    "test:node": "node --test tests/*.test.js"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "jest": "^30.5.1"
+  }
 }

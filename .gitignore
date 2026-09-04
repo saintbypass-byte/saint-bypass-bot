@@ -6,6 +6,7 @@ node_modules/
 *.auth_info*
 auth_info_baileys/
 data/
+coverage/
 logs/
 .tmp/
 .DS_Store
