@@ -13,6 +13,7 @@ const { loadSettings } = require("./settings");
 const { storeMessage, handleMessageRevocation } = require("./antidelete");
 const AntiLinkKick = require("./antilinkick.js");
 const { antibugHandler } = require("./antibug.js"); // ✅ import correct function
+const { createAntiLinkPolicy, handleAntiLink } = require("../src/features/anti-link");
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
@@ -119,21 +120,20 @@ async function startBot() {
       return;  
     }  
 
-    // ✅ Antilink
-    if (
-      jid.endsWith("@g.us") &&
-      global.antilink[jid] === true &&
-      /(chat\.whatsapp\.com|t\.me|discord\.gg|wa\.me|bit\.ly|youtu\.be|https?:\/\/)/i.test(text) &&
-      !msg.key.fromMe
-    ) {
-      try {
-        await sock.sendMessage(jid, {  
-          delete: { remoteJid: jid, fromMe: false, id: msg.key.id, participant: msg.key.participant || msg.participant }  
-        });  
-        
-      } catch (err) {
-        console.error("❌ Antilink Delete Error:", err.message);
-      }
+    // ✅ Antilink (modular feature)
+    try {
+      const antiLinkPolicy = createAntiLinkPolicy({
+        enabled: global.antilink[jid] === true,
+        ownerJids: [global.owner],
+      });
+      const moderation = await handleAntiLink({
+        conn: sock,
+        message: msg,
+        policy: antiLinkPolicy,
+        onError: (label, err) => console.error(`❌ ${label}:`, err.message),
+      });
+    } catch (err) {
+      console.error("❌ Antilink Middleware Error:", err.message);
     }
 
     // ✅ AntilinkKick
