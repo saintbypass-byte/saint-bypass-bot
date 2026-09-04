@@ -30,3 +30,14 @@ node index.js
 ```
 
 Never commit credentials, pairing data, session files, or private media. Copy `.env.example` to `.env` and keep the real file local.
+
+## Bot identity
+
+The bot is branded as **SAINTBYPASS PRO BOT** and uses `!` as its command prefix. The configured owner is `saintbypass` at `263714373922`.
+
+When the WhatsApp connection opens, the bot sends the generated professional startup banner to the owner with the current prefix and official links. The banner is stored at `legacy/media/saintbypass-banner.png`.
+
+Official links:
+
+- Telegram: https://t.me/saintbypassstarlink
+- GitHub: https://github.com/saintbypass-byte

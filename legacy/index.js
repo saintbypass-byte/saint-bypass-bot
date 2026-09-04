@@ -39,7 +39,7 @@ async function startBot() {
   global.settings = settings;
   global.signature = settings.signature || "> 𓆩 𝑺𝑨𝑰𝑵𝑻𝑩𝒀𝑷𝑨𝑺𝑺 𓆪";
   global.owner = ownerJid;
-    global.ownerNumber = ownerRaw;
+  global.ownerNumber = ownerRaw;
   global.settingsStore = settingsStore;
   // ✅ Flags
   global.antilink = settingsStore.state.antilink;
@@ -58,10 +58,26 @@ async function startBot() {
   sock.ev.on("connection.update", async (update) => {
     const { connection, lastDisconnect } = update;
 
-    if (connection === "open") {  
-      console.log("✅ [BOT ONLINE] Connected to WhatsApp!");  
-      rl.close();  
-    }  
+    if (connection === "open") {
+      console.log("✅ [BOT ONLINE] Connected to WhatsApp!");
+      try {
+        const bannerPath = path.resolve(__dirname, settings.startupBanner || "./media/saintbypass-banner.png");
+        await sock.sendMessage(ownerJid, {
+          image: fs.readFileSync(bannerPath),
+          caption: [
+            "✅ SAINTBYPASS PRO BOT ONLINE",
+            "👑 Owner: saintbypass",
+            `⚡ Prefix: ${settings.prefix || "!"}`,
+            "",
+            "Telegram: https://t.me/saintbypassstarlink",
+            "GitHub: https://github.com/saintbypass-byte",
+          ].join("\\n"),
+        });
+      } catch (err) {
+        console.error("❌ Startup banner error:", err.message);
+      }
+      rl.close();
+    }
 
     if (connection === "close") {  
       const shouldReconnect = (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut);  

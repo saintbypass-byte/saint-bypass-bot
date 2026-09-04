@@ -50,10 +50,11 @@ async function handleCommand(conn, msg) {
     msg.message?.videoMessage?.caption ||
     "";
 
-  if (!text.startsWith(".")) return;
+  const prefix = global.settings?.prefix || "!";
+  if (!text.startsWith(prefix)) return;
 
   const parts = text.trim().split(/ +/);
-  const command = parts[0].slice(1).toLowerCase();
+  const command = parts[0].slice(prefix.length).toLowerCase();
   const args = parts.slice(1);
 
   const chatId = msg.key.remoteJid;

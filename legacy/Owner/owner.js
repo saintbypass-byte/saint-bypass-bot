@@ -1,1 +1,2 @@
-module.exports = ["263714373922"]; // <-- Replace with YOUR number
+// Saint Bypass Bot owner number
+module.exports = ['263714373922'];
