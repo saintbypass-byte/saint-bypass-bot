@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { createServer } from 'node:http';
 import { PortableDatabase } from './portable-db.js';
 import { Bot, GrammyError, HttpError, InputFile } from 'grammy';
 
@@ -102,6 +103,20 @@ bot.on('message', async (ctx, next) => {
 });
 
 bot.catch((err) => { const e=err.error; if (e instanceof GrammyError) console.error('Telegram error:',e.description); else if (e instanceof HttpError) console.error('Network error:',e); else console.error('Unhandled error:',e); });
+
+if (process.env.PORT) {
+  const healthServer = createServer((req, res) => {
+    if (req.url === '/healthz') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok', service: 'saintbypass-telegram-bot' }));
+      return;
+    }
+    res.writeHead(404);
+    res.end('Not found');
+  });
+  healthServer.listen(Number(process.env.PORT), '0.0.0.0', () => console.log(`Health server listening on ${process.env.PORT}`));
+}
+
 console.log('SAINTBYPASS PRO BOT starting with 25 commands…');
 await bot.api.setMyCommands(commands.map(([command, description]) => ({ command, description })));
 await bot.start({ allowed_updates: ['message','edited_message','chat_member'] });
