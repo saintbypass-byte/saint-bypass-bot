@@ -71,6 +71,10 @@ For development, use `npm run dev`. The local SQLite database is created at `dat
 | `COMMAND_PREFIX` | No | Documentation prefix; Telegram slash commands remain supported |
 | `LOG_LEVEL` | No | Reserved for deployment logging |
 
+## 24/7 cloud deployment
+
+For production hosting on Railway or Render, see [`docs/DEPLOYMENT_24_7.md`](docs/DEPLOYMENT_24_7.md). The guide covers persistent SQLite storage, secrets, one-instance long polling, backups, security, monitoring, and troubleshooting.
+
 ## Testing and checks
 
 ```bash
