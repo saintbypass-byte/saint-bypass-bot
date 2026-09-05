@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import Database from 'better-sqlite3';
+import { PortableDatabase } from './portable-db.js';
 import { Bot, GrammyError, HttpError, InputFile } from 'grammy';
 
 const token = process.env.BOT_TOKEN;
@@ -9,13 +9,8 @@ if (!token || token === 'replace_with_botfather_token') {
 
 const OWNER_ID = Number(process.env.BOT_OWNER_ID || 0);
 const PREFIX = process.env.COMMAND_PREFIX || '/';
-const db = new Database(process.env.DB_PATH || './data/saintbypass.sqlite');
-db.pragma('journal_mode = WAL');
-db.exec(`
-  CREATE TABLE IF NOT EXISTS settings (chat_id TEXT PRIMARY KEY, rules TEXT DEFAULT 'No rules have been configured yet.', welcome TEXT DEFAULT 'Welcome, {name}! Please read the group rules.', antilink INTEGER DEFAULT 0, antispam INTEGER DEFAULT 0, locked INTEGER DEFAULT 0);
-  CREATE TABLE IF NOT EXISTS warnings (chat_id TEXT NOT NULL, user_id TEXT NOT NULL, count INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(chat_id, user_id));
-  CREATE TABLE IF NOT EXISTS stats (chat_id TEXT PRIMARY KEY, messages INTEGER NOT NULL DEFAULT 0, actions INTEGER NOT NULL DEFAULT 0);
-`);
+const db = new PortableDatabase(process.env.DB_PATH || './data/saintbypass.json');
+db.exec('portable persistent storage initialized');
 
 const bot = new Bot(token);
 const commands = [

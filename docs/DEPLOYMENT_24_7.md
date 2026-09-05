@@ -4,7 +4,7 @@ This guide explains how to run **SAINTBYPASS PRO BOT** continuously on a managed
 
 > [https://github.com/saintbypass-byte/saint-bypass-bot](https://github.com/saintbypass-byte/saint-bypass-bot)
 
-The bot is a Node.js long-polling process. It does not expose an HTTP webhook endpoint, so it should be deployed as a continuously running service rather than as a short-lived job. It stores group settings and warnings in SQLite. That database must be placed on a persistent volume or disk if settings are expected to survive restarts and redeployments.
+The bot is a Node.js long-polling process. It does not expose an HTTP webhook endpoint, so it should be deployed as a continuously running service rather than as a short-lived job. It stores group settings, warnings, and activity counters in a small JSON state file. That file must be placed on a persistent volume or disk if settings are expected to survive restarts and redeployments.
 
 ## 1. Choose the hosting model
 
@@ -15,12 +15,12 @@ Both platforms can run the bot continuously, but their service terminology diffe
 | Correct service type | Regular service | Background Worker |
 | Bot process | `npm start` | `npm start` |
 | Telegram transport | Long polling | Long polling |
-| Persistent SQLite | Attach a Railway Volume and set `DB_PATH` inside it | Attach a Render Persistent Disk and set `DB_PATH` inside it |
+| Persistent state file | Attach a Railway Volume and set `DB_PATH` inside it | Attach a Render Persistent Disk and set `DB_PATH` inside it |
 | Public HTTP endpoint | Not required for this bot | Not required for a Background Worker |
-| Scaling recommendation | One replica when using SQLite | One worker instance when using SQLite |
+| Scaling recommendation | One replica when using the local state file | One worker instance when using the local state file |
 | Best operational fit | Simple GitHub-connected service with a mounted volume | Explicit worker service with a mounted persistent disk |
 
-A single instance is intentional. Telegram long polling should not be run by multiple replicas using the same bot token, and the local SQLite file is designed for one active writer. If the project later needs horizontal scaling, move settings and warnings to a managed database before adding replicas.
+A single instance is intentional. Telegram long polling should not be run by multiple replicas using the same bot token, and the local state file is designed for one active writer. If the project later needs horizontal scaling, move settings and warnings to a managed database before adding replicas.
 
 ## 2. Prepare the Telegram bot
 
@@ -61,7 +61,7 @@ npm ci
 npm start
 ```
 
-The application requires Node.js 20 or newer, installs `grammy`, `better-sqlite3`, and `dotenv`, and creates the SQLite schema automatically on first launch. It does not require a web server, webhook URL, reverse proxy, or separate Redis service.
+The application requires Node.js 20 or newer, installs `grammy` and `dotenv`, and creates the persistent state file automatically on first launch. It does not require a web server, webhook URL, reverse proxy, or separate Redis service.
 
 ## 4. Required environment variables
 
@@ -71,7 +71,7 @@ Configure these variables in the hosting provider's secret/environment settings 
 |---|---:|---|---|---|
 | `BOT_TOKEN` | Yes | BotFather token | BotFather token | Authenticates the Telegram Bot API |
 | `BOT_OWNER_ID` | No | Numeric Telegram ID | Numeric Telegram ID | Allows the configured owner through the owner check |
-| `DB_PATH` | Yes for persistence | `/data/saintbypass.sqlite` | `/var/data/saintbypass.sqlite` | Places SQLite on persistent storage |
+| `DB_PATH` | Yes for persistence | `/data/saintbypass.json` | `/var/data/saintbypass.json` | Places portable local state storage on persistent storage |
 | `COMMAND_PREFIX` | No | `/` | `/` | Documentation/display prefix |
 | `LOG_LEVEL` | No | `info` | `info` | Reserved logging setting |
 
@@ -104,8 +104,8 @@ The database is not safe on ephemeral deployment storage. Create a Volume from t
 
 1. Add a Volume to the bot service.
 2. Set the mount path to `/data`.
-3. Choose a size appropriate for a small SQLite database. The database is usually small, but leave room for SQLite journal files and future operational data.
-4. Add the service variable `DB_PATH=/data/saintbypass.sqlite`.
+3. Choose a size appropriate for a small JSON state file. The database is usually small, but leave room for state-file backups and future operational data.
+4. Add the service variable `DB_PATH=/data/saintbypass.json`.
 5. Redeploy the service.
 
 Railway documents that volumes provide persistent data and that the available size depends on the plan. Railway also notes that attaching a volume prevents multiple deployments from being active on the same mounted volume, so a short interruption during redeployment is expected.[4]
@@ -117,12 +117,12 @@ In the Railway service's **Variables** section, add:
 ```text
 BOT_TOKEN=<your BotFather token>
 BOT_OWNER_ID=<optional numeric Telegram user ID>
-DB_PATH=/data/saintbypass.sqlite
+DB_PATH=/data/saintbypass.json
 COMMAND_PREFIX=/
 LOG_LEVEL=info
 ```
 
-Do not set `DB_PATH` to `./data/saintbypass.sqlite` after attaching the Volume. A relative path may point outside the mounted directory and can be lost when Railway replaces the deployment.
+Do not set `DB_PATH` to `./data/saintbypass.json` after attaching the Volume. A relative path may point outside the mounted directory and can be lost when Railway replaces the deployment.
 
 ### 5.4 Deploy and verify
 
@@ -134,17 +134,17 @@ After the first deployment:
 4. Confirm that the supplied banner is returned.
 5. Add the bot to a test group and run `/help`.
 6. Promote it to administrator and test `/rules`, `/setrules`, `/warn`, `/mute`, `/pin`, `/lock`, and `/unlock`.
-7. Restart or redeploy the service, then run `/settings` and `/warnings` to confirm the SQLite data remains.
+7. Restart or redeploy the service, then run `/settings` and `/warnings` to confirm the persistent state remains.
 
 Railway's deployment state becomes active after startup when no healthcheck is configured. Railway healthchecks are not continuous monitoring; they are used during deployment activation, so use platform logs or an external monitor if you need ongoing alerting.[2]
 
 ### 5.5 Railway restart and graceful shutdown notes
 
-Railway can restart or redeploy the service after crashes, manual actions, migrations, or platform operations. Railway sends `SIGTERM` during replacement deployments and documents a configurable draining period through `RAILWAY_DEPLOYMENT_DRAINING_SECONDS`.[3] The bot uses Telegram long polling and SQLite, so keep one active deployment and avoid manually starting a second copy with the same token.
+Railway can restart or redeploy the service after crashes, manual actions, migrations, or platform operations. Railway sends `SIGTERM` during replacement deployments and documents a configurable draining period through `RAILWAY_DEPLOYMENT_DRAINING_SECONDS`.[3] The bot uses Telegram long polling and portable local state storage, so keep one active deployment and avoid manually starting a second copy with the same token.
 
 ## 6. Render deployment
 
-Render provides a dedicated **Background Worker** service type for continuously running processes that do not receive incoming traffic.[5] This is the natural Render service type for this bot. Render services have an ephemeral filesystem by default, so attach a Persistent Disk if SQLite data must survive deploys and restarts.[6]
+Render provides a dedicated **Background Worker** service type for continuously running processes that do not receive incoming traffic.[5] This is the natural Render service type for this bot. Render services have an ephemeral filesystem by default, so attach a Persistent Disk if local state data must survive deploys and restarts.[6]
 
 ### 6.1 Create the Background Worker
 
@@ -166,7 +166,7 @@ Open the worker's **Environment** page and add:
 ```text
 BOT_TOKEN=<your BotFather token>
 BOT_OWNER_ID=<optional numeric Telegram user ID>
-DB_PATH=/var/data/saintbypass.sqlite
+DB_PATH=/var/data/saintbypass.json
 COMMAND_PREFIX=/
 LOG_LEVEL=info
 ```
@@ -181,9 +181,9 @@ Create a disk from the worker's **Disks** settings:
 2. Set the mount path to `/var/data`.
 3. Choose the smallest size that comfortably fits the database and any future runtime files.
 4. Save the disk and allow Render to redeploy the worker.
-5. Confirm `DB_PATH=/var/data/saintbypass.sqlite` is set.
+5. Confirm `DB_PATH=/var/data/saintbypass.json` is set.
 
-Render states that only filesystem changes under the disk's mount path persist. The rest of the service filesystem remains ephemeral.[6] Render also limits a persistent disk to one service instance, which is another reason to run exactly one bot worker when using local SQLite.
+Render states that only filesystem changes under the disk's mount path persist. The rest of the service filesystem remains ephemeral.[6] Render also limits a persistent disk to one service instance, which is another reason to run exactly one bot worker when using local state storage.
 
 ### 6.4 Verify the deployment
 
@@ -209,7 +209,7 @@ services:
       - key: BOT_OWNER_ID
         sync: false
       - key: DB_PATH
-        value: /var/data/saintbypass.sqlite
+        value: /var/data/saintbypass.json
       - key: COMMAND_PREFIX
         value: /
       - key: LOG_LEVEL
@@ -222,19 +222,20 @@ services:
 
 Validate the Blueprint before syncing it. Render's official Blueprint reference documents `type: worker`, Node runtimes, `buildCommand`, `startCommand`, environment variables, and persistent disk fields.[9] Plan names and pricing can change, so select the currently available paid worker plan in the dashboard if `starter` is not available in the account or region.
 
-## 7. SQLite persistence and backups
+## 7. Persistent state and backups
 
-The bot's SQLite database contains group rules, welcome messages, anti-link and anti-spam settings, lock state, warning counts, and activity counters. Losing it does not expose the Telegram token, but it will reset moderation configuration and warning history.
+The bot's state file contains group rules, welcome messages, anti-link and anti-spam settings, lock state, warning counts, and activity counters. Losing it does not expose the Telegram token, but it will reset moderation configuration and warning history.
 
-A persistent disk protects against ordinary restarts and redeploys; it is not a complete backup strategy. Schedule periodic copies of the database or use provider snapshots where available. Before copying, stop the worker briefly or use a SQLite-aware backup method so the backup is consistent. A simple maintenance approach on a server with shell access is:
+A persistent disk protects against ordinary restarts and redeploys; it is not a complete backup strategy. Schedule periodic copies of the state file or use provider snapshots where available. Before copying, stop the worker briefly so the backup is consistent. A simple maintenance approach on a server with shell access is:
 
 ```bash
-sqlite3 /var/data/saintbypass.sqlite '.backup /var/data/backups/saintbypass-$(date +%Y%m%d-%H%M%S).sqlite'
+mkdir -p /var/data/backups
+cp /var/data/saintbypass.json /var/data/backups/saintbypass-$(date +%Y%m%d-%H%M%S).json
 ```
 
-The `sqlite3` CLI is not included in the bot repository by default, so do not add this command to the application start process unless the host provides the CLI. For Railway and Render, use the provider's disk backup facilities or a separate maintenance environment. Keep backups encrypted, restrict access, and periodically test restoration.
+For Railway and Render, use the provider's disk backup facilities or a separate maintenance environment. Keep backups encrypted, restrict access, and periodically test restoration.
 
-If the bot grows to multiple instances, needs analytics queries, or requires zero-downtime migrations, migrate settings and warnings to a managed database before scaling. Do not put one SQLite file on a shared network mount and run multiple polling instances against it.
+If the bot grows to multiple instances, needs analytics queries, or requires zero-downtime migrations, migrate settings and warnings to a managed database before scaling. Do not put one state file on a shared network mount and run multiple polling instances against it.
 
 ## 8. Security hardening
 
@@ -248,7 +249,7 @@ Use the following production baseline:
 | Privacy mode | Disable only when the bot must inspect ordinary member messages |
 | Repository | Keep secrets, databases, logs, and session files ignored |
 | Test group | Test destructive commands in a separate group before production |
-| Replicas | Keep one instance with long polling and SQLite |
+| Replicas | Keep one instance with long polling and portable local state storage |
 | Deploy access | Protect the GitHub repository and hosting account with MFA |
 | Logs | Never print `BOT_TOKEN`; restrict dashboard access |
 
@@ -270,14 +271,14 @@ The bot must be a group administrator with the relevant permission. Reply to the
 
 ### Settings disappear after redeploy
 
-The process is writing SQLite outside the persistent mount. Check `DB_PATH` exactly:
+The process is writing its state file outside the persistent mount. Check `DB_PATH` exactly:
 
 ```text
-Railway: /data/saintbypass.sqlite
-Render:  /var/data/saintbypass.sqlite
+Railway: /data/saintbypass.json
+Render:  /var/data/saintbypass.json
 ```
 
-Also verify that the volume or disk is attached to the same service that runs the bot. Do not scale to multiple instances while using local SQLite.
+Also verify that the volume or disk is attached to the same service that runs the bot. Do not scale to multiple instances while using local state storage.
 
 ### Railway healthcheck reports service unavailable
 
@@ -291,9 +292,9 @@ You likely created a Web Service instead of a Background Worker. Recreate the se
 
 More than one process is polling with the same token. Stop all extra local, Railway, Render, or container instances. Keep only one production worker active.
 
-### SQLite reports a locked database
+### State file conflicts or lost settings
 
-This normally indicates multiple processes are using the same file or a backup is copying it during writes. Stop duplicate instances, keep one worker, and use a SQLite-aware backup procedure. If the workload requires concurrent writers, migrate to a managed database.
+This normally indicates multiple processes are using the same file, the file is outside the mounted disk, or a deployment replaced ephemeral storage. Stop duplicate instances, verify `DB_PATH`, keep one worker, and use provider disk snapshots or a stopped-worker file copy for backups. If the workload requires concurrent writers, migrate to a managed database.
 
 ## 10. Release checklist
 

@@ -8,7 +8,7 @@ A professional Telegram group-management bot for moderation, member safety, conf
 
 ## Features
 
-The bot provides persistent per-group settings, administrator-only moderation actions, warnings, lock and unlock controls, anti-link filtering, basic anti-spam protection, message reporting, activity statistics, and a branded help panel. Settings are stored locally in SQLite, while Telegram updates are received through long polling so no public webhook server is required.
+The bot provides persistent per-group settings, administrator-only moderation actions, warnings, lock and unlock controls, anti-link filtering, basic anti-spam protection, message reporting, activity statistics, and a branded help panel. Settings are stored locally in a portable JSON state file, while Telegram updates are received through long polling so no public webhook server is required.
 
 ## Command reference
 
@@ -59,7 +59,7 @@ Set `BOT_TOKEN` and `BOT_OWNER_ID` in `.env`. `BOT_OWNER_ID` is optional but all
 npm start
 ```
 
-For development, use `npm run dev`. The local SQLite database is created at `data/saintbypass.sqlite` and is intentionally ignored by Git.
+For development, use `npm run dev`. The local state file is created at `data/saintbypass.json` and is intentionally ignored by Git.
 
 ## Configuration
 
@@ -67,13 +67,13 @@ For development, use `npm run dev`. The local SQLite database is created at `dat
 |---|---:|---|
 | `BOT_TOKEN` | Yes | Token issued by BotFather |
 | `BOT_OWNER_ID` | No | Numeric owner ID |
-| `DB_PATH` | No | SQLite database path |
+| `DB_PATH` | No | Persistent JSON state-file path |
 | `COMMAND_PREFIX` | No | Documentation prefix; Telegram slash commands remain supported |
 | `LOG_LEVEL` | No | Reserved for deployment logging |
 
 ## 24/7 cloud deployment
 
-For production hosting on Railway or Render, see [`docs/DEPLOYMENT_24_7.md`](docs/DEPLOYMENT_24_7.md). The guide covers persistent SQLite storage, secrets, one-instance long polling, backups, security, monitoring, and troubleshooting.
+For production hosting on Railway or Render, see [`docs/DEPLOYMENT_24_7.md`](docs/DEPLOYMENT_24_7.md). The guide covers persistent state storage, secrets, one-instance long polling, backups, security, monitoring, and troubleshooting.
 
 ## Testing and checks
 
