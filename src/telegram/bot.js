@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { createServer } from 'node:http';
 import { PortableDatabase } from './portable-db.js';
 import { Bot, GrammyError, HttpError, InputFile, InlineKeyboard } from 'grammy';
+import { API_MODULES, PRO_TOOLS, THEMES, entitlementFor, isOwner, renderToolCatalog, safeApiPolicy, themeFor, toolsByCategory } from './pro-tools.js';
 
 const token = process.env.BOT_TOKEN;
 if (!token || token === 'replace_with_botfather_token') {
@@ -9,6 +10,7 @@ if (!token || token === 'replace_with_botfather_token') {
 }
 
 const OWNER_ID = Number(process.env.BOT_OWNER_ID || 0);
+const PREMIUM_CHAT_IDS = String(process.env.PREMIUM_CHAT_IDS || '').split(',').map((value) => Number(value.trim())).filter(Boolean);
 const PREFIX = process.env.COMMAND_PREFIX || '/';
 const db = new PortableDatabase(process.env.DB_PATH || './data/saintbypass.json');
 db.exec('portable persistent storage initialized');
@@ -46,6 +48,8 @@ const securityMenu = () => new InlineKeyboard()
   .text('🔗 Anti-link', 'toggle:antilink').text('🧠 Anti-spam', 'toggle:antispam').row()
   .text('🔒 Lock group', 'action:lock').text('🔓 Unlock', 'action:unlock').row()
   .text('◀ Back', 'menu:dashboard');
+const proMenu = () => new InlineKeyboard().text('◈ Pro status', 'pro:status').text('▣ Tool catalog', 'pro:tools').row().text('◉ HUD themes', 'pro:themes').text('⌁ API modules', 'pro:apis').row().text('◀ Dashboard', 'menu:dashboard');
+const toolCategories = () => new InlineKeyboard().text('Group', 'pro:cat:Group').text('Protection', 'pro:cat:Protection').row().text('Content', 'pro:cat:Content').text('Utility', 'pro:cat:Utility').row().text('Owner', 'pro:cat:Owner').text('Integration', 'pro:cat:Integration').row().text('◀ Pro panel', 'pro:status');
 
 async function isAdminFor(ctx, chatId, userId = ctx.from?.id) {
   if (OWNER_ID && userId === OWNER_ID) return true;
@@ -80,6 +84,8 @@ async function finishPulse(ctx, message, text, keyboard) {
 function helpText() {
   return `${brand}\n${divider}\n<b>COMMAND MATRIX</b>\n\n${commands.map(([name, description], i) => `<code>${String(i + 1).padStart(2, '0')}</code>  ${commandText(name, description)}`).join('\n')}\n\n<i>Reply to a member or message when a target is required.</i>`;
 }
+function tierFor(ctx, chatId = ctx.chat?.id) { return entitlementFor({ userId: ctx.from?.id, chatId, ownerId: OWNER_ID, premiumChats: [...PREMIUM_CHAT_IDS, ...(chatId && db.isPremium(chatId) ? [chatId] : [])] }); }
+function hud(chatId, title, body) { const theme = themeFor(chatId ? db.getTheme(chatId) : 'obsidian'); return `${theme.accent} <b>SAINTBYPASS // ${esc(theme.status)}</b>\n${theme.line}\n<b>${esc(title)}</b>\n\n${body}\n\n<code>THEME: ${esc(theme.name)}</code>`; }
 function settingsText(chatId, title = 'GROUP DASHBOARD') {
   const s = settings(chatId);
   return `${brand}\n${divider}\n<b>${esc(title)}</b>\n\n🔗 Anti-link: <b>${s.antilink ? 'ONLINE' : 'OFFLINE'}</b>\n🧠 Anti-spam: <b>${s.antispam ? 'ONLINE' : 'OFFLINE'}</b>\n🔒 Group lock: <b>${s.locked ? 'ACTIVE' : 'OPEN'}</b>\n\n<i>Use the buttons below for instant controls.</i>`;
@@ -90,6 +96,13 @@ bot.command('start', async (ctx) => {
   await ctx.replyWithPhoto(new InputFile('public/assets/saintbypass-banner.png'), { caption, parse_mode: 'HTML', reply_markup: menu() });
 });
 bot.command('help', async (ctx) => ctx.reply(helpText(), { parse_mode: 'HTML', reply_markup: backMenu() }));
+bot.command('pro', async (ctx) => { const tier = tierFor(ctx); await ctx.reply(hud(ctx.chat?.id, 'PRO PLATFORM', `Tier: <b>${tier.label}</b>\nTools: <b>${PRO_TOOLS.length}</b> registered\nAPI modules: <b>${API_MODULES.length}</b> available\n\n${tier.tier === 'CORE' ? '<i>Premium tools are limited until this chat is granted Pro access.</i>' : '<i>Premium control surfaces are unlocked for this chat.</i>'}`), { parse_mode: 'HTML', reply_markup: proMenu() }); });
+bot.command('tools', async (ctx) => ctx.reply(hud(ctx.chat?.id, 'TOOL CATALOG', `Select a module family to browse the <b>${PRO_TOOLS.length}</b>-tool registry.`), { parse_mode: 'HTML', reply_markup: toolCategories() }));
+bot.command('apis', async (ctx) => { const tier = tierFor(ctx); if (tier.tier === 'CORE') return ctx.reply('API modules are available to Pro or Owner tiers only.'); await ctx.reply(hud(ctx.chat?.id, 'API MODULES', `${renderToolCatalog('Integration')}\n\n<i>${esc(safeApiPolicy())}</i>`), { parse_mode: 'HTML', reply_markup: proMenu() }); });
+bot.command('plugins', async (ctx) => { const tier = tierFor(ctx); if (tier.tier === 'CORE') return ctx.reply('The plugin registry is available to Pro or Owner tiers only.'); await ctx.reply(hud(ctx.chat?.id, 'PLUGIN REGISTRY', `${PRO_TOOLS.length} modular tools are registered and ready for staged activation.`), { parse_mode: 'HTML', reply_markup: proMenu() }); });
+bot.command('theme', async (ctx) => { const chatId = ctx.chat?.id; const name = args(ctx).toLowerCase(); if (!Object.hasOwn(THEMES, name)) return ctx.reply(`Available HUD themes: ${Object.keys(THEMES).join(', ')}`); if (!await requireAdmin(ctx)) return; db.setTheme(chatId, name); await ctx.reply(hud(chatId, 'HUD THEME UPDATED', `Active theme: <b>${esc(themeFor(name).name)}</b>`), { parse_mode: 'HTML', reply_markup: proMenu() }); });
+bot.command('grantpro', async (ctx) => { if (!isOwner(ctx.from?.id, OWNER_ID)) return ctx.reply('Owner access required.'); const chatId = Number(args(ctx)); if (!chatId) return ctx.reply('Usage: /grantpro numeric_chat_id'); db.setPremium(chatId, true); await ctx.reply(`Pro access granted to <code>${chatId}</code>.`, { parse_mode: 'HTML' }); });
+bot.command('revokepro', async (ctx) => { if (!isOwner(ctx.from?.id, OWNER_ID)) return ctx.reply('Owner access required.'); const chatId = Number(args(ctx)); if (!chatId) return ctx.reply('Usage: /revokepro numeric_chat_id'); db.setPremium(chatId, false); await ctx.reply(`Pro access revoked for <code>${chatId}</code>.`, { parse_mode: 'HTML' }); });
 bot.command('settings', async (ctx) => { if (!await requireGroup(ctx)) return; await ctx.reply(settingsText(ctx.chat.id, ctx.chat.title), { parse_mode: 'HTML', reply_markup: menu() }); });
 bot.command('id', async (ctx) => { const user = replyTarget(ctx); await ctx.reply(`${brand}\n${divider}\n🆔 <b>IDENTITY DATA</b>\n\nChat ID: <code>${ctx.chat.id}</code>\nUser ID: <code>${user?.id || ctx.from.id}</code>`, { parse_mode: 'HTML', reply_markup: backMenu() }); });
 bot.command('rules', async (ctx) => { if (!await requireGroup(ctx)) return; await ctx.reply(`${brand}\n${divider}\n📖 <b>GROUP RULES</b>\n\n${esc(settings(ctx.chat.id).rules)}`, { parse_mode: 'HTML', reply_markup: backMenu() }); });
@@ -131,6 +144,8 @@ bot.command('unlock', async (ctx) => { if (!await requireGroup(ctx) || !await re
 bot.command('report', async (ctx) => { if (!await requireGroup(ctx)) return; const reported = ctx.msg.reply_to_message; if (!reported) return ctx.reply('Reply to the message you want to report.'); const admins = await ctx.api.getChatAdministrators(ctx.chat.id); const text = `⚠️ <b>REPORT IN ${esc(ctx.chat.title)}</b>\nFrom: ${esc(targetLabel(ctx.from))} (<code>${ctx.from.id}</code>)\nMessage ID: <code>${reported.message_id}</code>`; for (const admin of admins) { try { await ctx.api.sendMessage(admin.user.id, text, { parse_mode: 'HTML' }); } catch {} } await ctx.reply('✅ Report sent to group administrators.', { parse_mode: 'HTML', reply_markup: menu() }); });
 bot.command('stats', async (ctx) => { if (!await requireGroup(ctx) || !await requireAdmin(ctx)) return; const row = db.prepare('SELECT * FROM stats WHERE chat_id=?').get(String(ctx.chat.id)); await ctx.reply(`${brand}\n${divider}\n📊 <b>ACTIVITY INTELLIGENCE</b>\n\nMessages observed: <b>${row?.messages || 0}</b>\nAdmin actions: <b>${row?.actions || 0}</b>`, { parse_mode: 'HTML', reply_markup: backMenu() }); });
 
+bot.callbackQuery(/^pro:(status|tools|themes|apis)$/, async (ctx) => { await ctx.answerCallbackQuery(); const action = ctx.match[1]; const chatId = ctx.callbackQuery.message?.chat.id; const tier = tierFor(ctx, chatId); if (action === 'status') return ctx.editMessageText(hud(chatId, 'PRO PLATFORM', `Tier: <b>${tier.label}</b>\nTools registered: <b>${PRO_TOOLS.length}</b>\nAPI modules: <b>${API_MODULES.length}</b>\n\n${tier.tier === 'CORE' ? 'Premium modules are locked for this chat.' : 'Premium modules are unlocked.'}`), { parse_mode: 'HTML', reply_markup: proMenu() }); if (action === 'tools') return ctx.editMessageText(hud(chatId, 'TOOL CATALOG', `Browse the <b>${PRO_TOOLS.length}</b>-tool modular registry by family.`), { parse_mode: 'HTML', reply_markup: toolCategories() }); if (action === 'themes') return ctx.editMessageText(hud(chatId, 'HUD THEMES', `Available themes: <b>${Object.keys(THEMES).join(' · ')}</b>\n\nUse <code>/theme name</code> as an administrator.`), { parse_mode: 'HTML', reply_markup: proMenu() }); if (tier.tier === 'CORE') return ctx.answerCallbackQuery({ text: 'Pro access required.', show_alert: true }); return ctx.editMessageText(hud(chatId, 'API MODULES', `${renderToolCatalog('Integration')}\n\n<i>${esc(safeApiPolicy())}</i>`), { parse_mode: 'HTML', reply_markup: proMenu() }); });
+bot.callbackQuery(/^pro:cat:(Group|Protection|Content|Utility|Owner|Integration)$/, async (ctx) => { await ctx.answerCallbackQuery(); const chatId = ctx.callbackQuery.message?.chat.id; const category = ctx.match[1]; const tier = tierFor(ctx, chatId); if (['Owner','Integration'].includes(category) && tier.tier === 'CORE') return ctx.answerCallbackQuery({ text: 'Pro access required.', show_alert: true }); return ctx.editMessageText(hud(chatId, `${category.toUpperCase()} MODULES`, renderToolCatalog(category)), { parse_mode: 'HTML', reply_markup: toolCategories() }); });
 bot.callbackQuery(/^menu:(dashboard|help|security|rules|stats|close)$/, async (ctx) => {
   await ctx.answerCallbackQuery();
   const action = ctx.match[1];
@@ -153,5 +168,6 @@ bot.catch((err) => { const e = err.error; if (e instanceof GrammyError) console.
 
 if (process.env.PORT) { const healthServer = createServer((req, res) => { if (req.url === '/healthz') { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ status: 'ok', service: 'saintbypass-telegram-bot' })); return; } res.writeHead(404); res.end('Not found'); }); healthServer.listen(Number(process.env.PORT), '0.0.0.0', () => console.log(`Health server listening on ${process.env.PORT}`)); }
 console.log('SAINTBYPASS PRO BOT starting with 25 commands…');
-await bot.api.setMyCommands(commands.map(([command, description]) => ({ command, description })));
+const proCommands = [['pro', 'Open the pro platform HUD'], ['tools', 'Browse the 70+ tool registry'], ['apis', 'Browse opt-in API modules'], ['plugins', 'Inspect the plugin registry'], ['theme', 'Select a HUD theme'], ['grantpro', 'Owner: grant Pro access'], ['revokepro', 'Owner: revoke Pro access']];
+await bot.api.setMyCommands([...commands, ...proCommands].map(([command, description]) => ({ command, description })));
 await bot.start({ allowed_updates: ['message', 'edited_message', 'chat_member', 'callback_query'] });

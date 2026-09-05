@@ -42,6 +42,14 @@ The bot provides persistent per-group settings, administrator-only moderation ac
 
 Commands that change group state require the sender to be a Telegram administrator. Moderation commands generally require replying to the target member or message. Send `/start` to open the branded dashboard, then use the inline buttons to navigate panels without memorizing commands.
 
+## Future-platform upgrade
+
+The bot now includes a modular registry of **73 safe tools** across group operations, protection, content utilities, local utilities, owner controls, and integrations. Use `/pro` for the 2050-style HUD, `/tools` to browse the catalog, `/apis` to inspect opt-in integrations, `/plugins` to inspect the registry, and `/theme obsidian|neon|frost|royal|matrix` to select a HUD theme.
+
+The entitlement model has three tiers. **Core** is the default. **Pro** can be granted to a chat with `/grantpro <chat_id>` by the configured owner or through `PREMIUM_CHAT_IDS`. **Owner** is automatically recognized from `BOT_OWNER_ID`. Pro and Owner unlock the API and integration catalog; they do not bypass Telegram permissions or service limits.
+
+API modules are metadata-driven and disabled until explicitly configured. They are intended for authorized services such as RSS, public status pages, GitHub metadata, weather, translation, approved calendar or workspace bridges, and encrypted backups. The test-inbox adapter is restricted to approved QA workflows. The platform must not be used for spam, mass messaging, credential collection, access bypass, or disposable-account abuse.
+
 ## Quick start
 
 Create a bot with [@BotFather](https://t.me/BotFather), copy the token, and add the bot to your group. Promote it to administrator with permission to delete messages, restrict members, ban members, pin messages, and manage chat permissions.
@@ -53,7 +61,7 @@ npm install
 cp .env.example .env
 ```
 
-Set `BOT_TOKEN` and `BOT_OWNER_ID` in `.env`. `BOT_OWNER_ID` is optional but allows the configured owner to pass the administrator check; normal group administration still follows Telegram's role system.
+Set `BOT_TOKEN` and `BOT_OWNER_ID` in `.env`. `BOT_OWNER_ID` is optional but identifies the owner tier; normal group administration still follows Telegram's role system. Add comma-separated chat IDs to `PREMIUM_CHAT_IDS` only for groups that should receive Pro access.
 
 ```bash
 npm start
@@ -66,7 +74,8 @@ For development, use `npm run dev`. The local state file is created at `data/sai
 | Variable | Required | Description |
 |---|---:|---|
 | `BOT_TOKEN` | Yes | Token issued by BotFather |
-| `BOT_OWNER_ID` | No | Numeric owner ID |
+| `BOT_OWNER_ID` | No | Numeric owner ID for Owner-tier controls |
+| `PREMIUM_CHAT_IDS` | No | Comma-separated chat IDs with Pro access |
 | `DB_PATH` | No | Persistent JSON state-file path |
 | `COMMAND_PREFIX` | No | Documentation prefix; Telegram slash commands remain supported |
 | `LOG_LEVEL` | No | Reserved for deployment logging |

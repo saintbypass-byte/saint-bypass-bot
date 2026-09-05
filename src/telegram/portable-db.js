@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 function emptyState() {
-  return { settings: {}, warnings: {}, stats: {} };
+  return { settings: {}, warnings: {}, stats: {}, premium: {}, themes: {} };
 }
 
 export class PortableDatabase {
@@ -18,6 +18,8 @@ export class PortableDatabase {
     this.state.settings ??= {};
     this.state.warnings ??= {};
     this.state.stats ??= {};
+    this.state.premium ??= {};
+    this.state.themes ??= {};
   }
 
   pragma() {}
@@ -28,6 +30,11 @@ export class PortableDatabase {
     fs.writeFileSync(temporary, JSON.stringify(this.state, null, 2));
     fs.renameSync(temporary, this.filePath);
   }
+
+  setPremium(chatId, enabled = true) { this.state.premium[String(chatId)] = Boolean(enabled); this.flush(); }
+  isPremium(chatId) { return Boolean(this.state.premium[String(chatId)]); }
+  setTheme(chatId, theme) { this.state.themes[String(chatId)] = theme; this.flush(); }
+  getTheme(chatId) { return this.state.themes[String(chatId)] || 'obsidian'; }
 
   prepare(sql) {
     const statement = sql.replace(/\s+/g, ' ').trim();
