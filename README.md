@@ -8,7 +8,7 @@ A professional Telegram group-management bot for moderation, member safety, conf
 
 ## Features
 
-The bot provides persistent per-group settings, administrator-only moderation actions, warnings, lock and unlock controls, anti-link filtering, basic anti-spam protection, message reporting, activity statistics, and a branded help panel. Settings are stored locally in a portable JSON state file, while Telegram updates are received through long polling so no public webhook server is required.
+The bot provides persistent per-group settings, administrator-only moderation actions, warnings, lock and unlock controls, anti-link filtering, basic anti-spam protection, message reporting, activity statistics, and a branded interactive control center. Inline buttons provide dashboard navigation and security toggles, animated feedback makes operations feel responsive, and mute, ban, and kick actions require confirmation. Settings are stored locally in a portable JSON state file, while Telegram updates are received through long polling; an optional `/healthz` endpoint is exposed when the host supplies `PORT`.
 
 ## Command reference
 
@@ -40,7 +40,7 @@ The bot provides persistent per-group settings, administrator-only moderation ac
 | 24 | `/report` | Send a replied-to message to administrators |
 | 25 | `/stats` | Show observed messages and admin actions |
 
-Commands that change group state require the sender to be a Telegram administrator. Moderation commands generally require replying to the target member or message.
+Commands that change group state require the sender to be a Telegram administrator. Moderation commands generally require replying to the target member or message. Send `/start` to open the branded dashboard, then use the inline buttons to navigate panels without memorizing commands.
 
 ## Quick start
 
