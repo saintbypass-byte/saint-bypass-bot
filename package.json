@@ -1,22 +1,22 @@
 {
-  "name": "saint-bypass-bot",
-  "version": "2.0.0",
-  "private": true,
-  "description": "Modular WhatsApp automation and group administration bot foundation",
-  "main": "legacy/index.js",
+  "name": "saintbypass-telegram-bot",
+  "version": "3.0.0",
+  "description": "Professional Telegram group-management bot with 25 moderation and administration commands.",
+  "type": "module",
+  "main": "src/telegram/bot.js",
   "scripts": {
-    "start": "node legacy/index.js",
-    "start:legacy": "node legacy/index.js",
-    "postinstall": "npm install --prefix legacy --omit=dev",
-    "check": "node --check legacy/index.js",
-    "test": "npm run test:jest && npm run test:node",
-    "test:jest": "jest --runInBand --coverage",
-    "test:node": "node --test tests/*.test.js"
+    "start": "node src/telegram/bot.js",
+    "dev": "node --watch src/telegram/bot.js",
+    "test": "node --test tests/*.test.js",
+    "check": "node --check src/telegram/bot.js"
   },
   "engines": {
     "node": ">=20"
   },
-  "devDependencies": {
-    "jest": "^30.5.1"
-  }
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "dotenv": "^16.4.7",
+    "grammy": "^1.35.0"
+  },
+  "license": "MIT"
 }
