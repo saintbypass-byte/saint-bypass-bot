@@ -20,6 +20,39 @@ const definitions = [
 export const PRO_TOOLS = definitions;
 export const API_MODULES = PRO_TOOLS.filter((tool) => tool.category === 'Integration');
 
+export const TIER_POLICIES = {
+  CORE: {
+    label: 'CORE ACCESS',
+    allowed: ['dashboard', 'basic_tools', 'group_tools', 'protection_tools', 'utility_tools', 'obsidian_theme'],
+    limits: { apiModules: 0, customThemes: 1, integrations: 0, premiumAutomations: 0 },
+    blockedMessage: 'This feature is available to Pro and Owner tiers. Core safety and moderation tools remain available.'
+  },
+  PRO: {
+    label: 'PRO ACCESS',
+    allowed: ['dashboard', 'basic_tools', 'group_tools', 'protection_tools', 'utility_tools', 'custom_themes', 'api_modules', 'analytics', 'premium_automations'],
+    limits: { apiModules: API_MODULES.length, customThemes: 5, integrations: API_MODULES.length, premiumAutomations: 10 },
+    blockedMessage: 'This feature requires Owner access.'
+  },
+  OWNER: {
+    label: 'SOVEREIGN OWNER',
+    allowed: ['*'],
+    limits: { apiModules: API_MODULES.length, customThemes: 5, integrations: API_MODULES.length, premiumAutomations: -1 },
+    blockedMessage: ''
+  }
+};
+
+export const PRO_FEATURES = [
+  ['HUD theme pack', 'Unlock all five visual themes and persistent per-chat theme selection.'],
+  ['API control room', 'Browse and activate explicitly configured API adapters with bounded requests.'],
+  ['Advanced analytics', 'Use richer activity panels and export-ready aggregated metrics.'],
+  ['Plugin workspace', 'Inspect the modular registry and stage approved tool modules.'],
+  ['Automation slots', 'Use up to ten bounded premium automation slots per Pro chat.'],
+  ['Priority diagnostics', 'Access expanded health, configuration, and entitlement diagnostics.']
+];
+
+export function tierPolicy(tier = 'CORE') { return TIER_POLICIES[tier] || TIER_POLICIES.CORE; }
+export function canUseFeature(tier, feature) { const policy = tierPolicy(tier); return policy.allowed.includes('*') || policy.allowed.includes(feature); }
+
 export function isOwner(userId, ownerId) { return Boolean(ownerId && Number(userId) === Number(ownerId)); }
 export function entitlementFor({ userId, chatId, ownerId, premiumChats = [] }) {
   if (isOwner(userId, ownerId)) return { tier: 'OWNER', label: 'SOVEREIGN OWNER', unlimited: true };
