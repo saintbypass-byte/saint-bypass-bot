@@ -44,7 +44,7 @@ Commands that change group state require the sender to be a Telegram administrat
 
 ## Future-platform upgrade
 
-The bot now includes a modular registry of **73 safe tools** across group operations, protection, content utilities, local utilities, owner controls, and integrations. Use `/pro` for the 2050-style HUD, `/tools` to browse the catalog, `/apis` to inspect opt-in integrations, `/plugins` to inspect the registry, and `/theme obsidian|neon|frost|royal|matrix` to select a HUD theme.
+The bot now includes a modular registry of **73 safe tools** across group operations, protection, content utilities, local utilities, owner controls, and integrations. Use `/pro` for the 2050-style HUD and `/tools` to open a paginated button grid with a dedicated clickable button for every tool. Each tool opens a detail panel, and the catalog provides previous/next navigation across ten pages. Use `/apis` to inspect opt-in integrations, `/plugins` to inspect the registry, `/ownercheck` to diagnose owner access, and `/theme obsidian|neon|frost|royal|matrix` to select a HUD theme.
 
 The entitlement model has three tiers. **Core** is the default. **Pro** can be granted to a chat with `/grantpro <chat_id>` by the configured owner or through `PREMIUM_CHAT_IDS`. **Owner** is automatically recognized from `BOT_OWNER_ID`. Pro and Owner unlock the API and integration catalog; they do not bypass Telegram permissions or service limits.
 
@@ -74,7 +74,8 @@ For development, use `npm run dev`. The local state file is created at `data/sai
 | Variable | Required | Description |
 |---|---:|---|
 | `BOT_TOKEN` | Yes | Token issued by BotFather |
-| `BOT_OWNER_ID` | No | Numeric owner ID for Owner-tier controls |
+| `BOT_OWNER_ID` | No | Primary numeric owner ID for Owner-tier controls |
+| `BOT_OWNER_IDS` | No | Optional comma-separated additional owner IDs |
 | `PREMIUM_CHAT_IDS` | No | Comma-separated chat IDs with Pro access |
 | `DB_PATH` | No | Persistent JSON state-file path |
 | `COMMAND_PREFIX` | No | Documentation prefix; Telegram slash commands remain supported |
