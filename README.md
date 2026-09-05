@@ -46,7 +46,7 @@ Commands that change group state require the sender to be a Telegram administrat
 
 The bot now includes a modular registry of **103 safe tools** across group operations, protection, content utilities, local utilities, owner controls, and integrations. Use `/pro` for the 2050-style HUD and `/tools` to open a paginated button grid with a dedicated clickable button for every tool. Each tool opens a detail panel, and the catalog provides previous/next navigation across ten pages. Use `/apis` to inspect opt-in integrations, `/plugins` to inspect the registry, `/ownercheck` to diagnose owner access, and `/theme obsidian|neon|frost|royal|matrix` to select a HUD theme.
 
-The entitlement model has three tiers. **Core** is the default. **Pro** can be granted to a chat with `/grantpro <chat_id>` by the configured owner or through `PREMIUM_CHAT_IDS`. **Owner** is automatically recognized from `BOT_OWNER_ID`. Pro and Owner unlock the API and integration catalog; they do not bypass Telegram permissions or service limits. The catalog now includes **50 API modules**, including a QA-only temporary inbox adapter.
+The entitlement model has three tiers. **Core** is the default. **Pro** can be granted to a chat with `/grantpro <chat_id>` by the configured owner or through `PREMIUM_CHAT_IDS`. **Owner** is automatically recognized from `BOT_OWNER_ID`, which is set to Telegram ID `7451988083` in the sanitized template. Pro and Owner unlock the API and integration catalog; they do not bypass Telegram permissions or service limits. The catalog now includes **50 API modules**, including a QA-only temporary inbox adapter.
 
 API modules are metadata-driven and disabled until explicitly configured. They are intended for authorized services such as RSS, public status pages, GitHub metadata, weather, translation, approved calendar or workspace bridges, and encrypted backups. The temporary inbox adapters are restricted to approved QA workflows and cannot be used for third-party account creation, verification bypass, or bulk disposable identities. The platform must not be used for spam, mass messaging, credential collection, access bypass, or disposable-account abuse.
 
@@ -61,7 +61,7 @@ npm install
 cp .env.example .env
 ```
 
-Set `BOT_TOKEN` and `BOT_OWNER_ID` in `.env`. `BOT_OWNER_ID` is optional but identifies the owner tier; normal group administration still follows Telegram's role system. Add comma-separated chat IDs to `PREMIUM_CHAT_IDS` only for groups that should receive Pro access.
+Set `BOT_TOKEN` in `.env`; the sanitized template configures `BOT_OWNER_ID=7451988083`. Owner access is password-free and is based on the Telegram numeric ID received from Telegram. Never add a Telegram password to the bot or repository. Add comma-separated chat IDs to `PREMIUM_CHAT_IDS` only for groups that should receive Pro access. Use `/ownercheck` to verify the current Telegram ID and owner match.
 
 ```bash
 npm start
@@ -74,7 +74,7 @@ For development, use `npm run dev`. The local state file is created at `data/sai
 | Variable | Required | Description |
 |---|---:|---|
 | `BOT_TOKEN` | Yes | Token issued by BotFather |
-| `BOT_OWNER_ID` | No | Primary numeric owner ID for Owner-tier controls |
+| `BOT_OWNER_ID` | No | Primary numeric owner ID; sanitized template uses `7451988083` |
 | `BOT_OWNER_IDS` | No | Optional comma-separated additional owner IDs |
 | `PREMIUM_CHAT_IDS` | No | Comma-separated chat IDs with Pro access |
 | `DB_PATH` | No | Persistent JSON state-file path |
